@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "759743720363",
+    "project_id": "campusflow-cbfd6",
+    "storage_bucket": "campusflow-cbfd6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:759743720363:android:0cf7ec02cc57aba07380ee",
+        "android_client_info": {
+          "package_name": "com.example.campusflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLxAD5jaKGwGOaw-aVr9HBap7l-U9jxzI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
