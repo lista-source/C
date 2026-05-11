@@ -45,7 +45,7 @@ fun DashboardCard(
     Card(
         onClick = onClick,
         modifier = modifier
-            .height(130.dp)
+            .height(110.dp)
             .scale(scale)
             .shadow(8.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),

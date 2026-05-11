@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +49,25 @@ fun LecturerScheduleScreen(
     }
     var selectedDay       by remember { mutableStateOf(todayName) }
     var selectedEntry     by remember { mutableStateOf<TimetableEntry?>(null) }
-    var classStudents     by remember { mutableStateOf<List<AcademicResult>>(emptyList()) }
-    var loadingStudents   by remember { mutableStateOf(false) }
-    val scope             = rememberCoroutineScope()
+    val classResults    by viewModel.classResults.collectAsState()
+    val classAttendance by viewModel.classAttendance.collectAsState()
+    val vmMessage       by viewModel.message.collectAsState()
+    val scope           = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var markStudentId   by remember { mutableStateOf("") }
+    var showMarkDialog  by remember { mutableStateOf(false) }
+    var markForCourse   by remember { mutableStateOf("") }
+    var lecturerId      by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        authRepository.currentUser?.uid?.let { viewModel.loadSchedule(it) }
+        authRepository.currentUser?.uid?.let { uid ->
+            lecturerId = uid
+            viewModel.loadSchedule(uid)
+        }
+    }
+
+    LaunchedEffect(vmMessage) {
+        vmMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessage() }
     }
 
     val grouped     = schedule.groupBy { it.dayOfWeek }
@@ -64,6 +76,7 @@ fun LecturerScheduleScreen(
     val totalCourses = schedule.map { it.courseId }.distinct().size
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Teaching Schedule", fontWeight = FontWeight.Bold, color = NavyPrimary) },
@@ -177,16 +190,11 @@ fun LecturerScheduleScreen(
                                 entry = entry,
                                 onViewStudents = {
                                     selectedEntry = entry
-                                    if (repository != null) {
-                                        loadingStudents = true
-                                        scope.launch {
-                                            classStudents = repository.getResultsByCourse(entry.courseId)
-                                            loadingStudents = false
-                                        }
-                                    }
+                                    viewModel.loadClassStudents(entry.courseId)
                                 },
                                 onTakeAttendance = {
-                                    navController.navigate("lecturer_attendance")
+                                    markForCourse  = entry.courseId
+                                    showMarkDialog = true
                                 }
                             )
                         }
@@ -196,10 +204,48 @@ fun LecturerScheduleScreen(
         }
     }
 
+    // Mark attendance dialog
+    if (showMarkDialog) {
+        AlertDialog(
+            onDismissRequest = { showMarkDialog = false },
+            title = { Text("Mark Student Attendance", fontWeight = FontWeight.Bold, color = NavyPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Enter the student ID to mark as present for: $markForCourse", fontSize = 13.sp, color = TextSecondary)
+                    OutlinedTextField(
+                        value = markStudentId,
+                        onValueChange = { markStudentId = it },
+                        label = { Text("Student ID / Reg No") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = NavyPrimary),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (markStudentId.isNotBlank()) {
+                            viewModel.markStudentAttendance(markStudentId.trim(), markForCourse, lecturerId)
+                            markStudentId  = ""
+                            showMarkDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary),
+                    enabled = markStudentId.isNotBlank()
+                ) { Text("Mark Present") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMarkDialog = false; markStudentId = "" }) { Text("Cancel") }
+            }
+        )
+    }
+
     // Class detail / student roster dialog
     selectedEntry?.let { entry ->
         AlertDialog(
-            onDismissRequest = { selectedEntry = null; classStudents = emptyList() },
+            onDismissRequest = { selectedEntry = null },
             title = {
                 Column {
                     Text(entry.courseName, fontWeight = FontWeight.Bold, color = NavyPrimary, fontSize = 16.sp)
@@ -207,39 +253,44 @@ fun LecturerScheduleScreen(
                 }
             },
             text = {
-                Column(modifier = Modifier.heightIn(max = 400.dp)) {
-                    // Class info
+                Column(modifier = Modifier.heightIn(max = 420.dp)) {
                     ClassDetailRow(Icons.Default.MenuBook, "Course ID", entry.courseId)
                     ClassDetailRow(Icons.Default.Room, "Venue", entry.room.ifBlank { "TBA" })
                     ClassDetailRow(Icons.Default.Business, "Department", entry.department.ifBlank { "N/A" })
                     HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = DividerGrey)
 
-                    // Student roster from results
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.People, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "Enrolled Students (${classStudents.size})",
+                            "Enrolled Students (${classResults.size})",
                             fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 13.sp
                         )
                     }
                     Spacer(Modifier.height(8.dp))
-                    if (loadingStudents) {
+
+                    if (isLoading) {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = NavyPrimary)
                         }
-                    } else if (classStudents.isEmpty()) {
+                    } else if (classResults.isEmpty()) {
                         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
                             Text("No results recorded yet for this course.", fontSize = 13.sp, color = TextHint)
                         }
                     } else {
                         LazyColumn(
-                            modifier = Modifier.heightIn(max = 260.dp),
+                            modifier = Modifier.heightIn(max = 280.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            items(classStudents) { result ->
+                            items(classResults) { result ->
                                 val gradeColor = when (result.grade) {
-                                    "A" -> SuccessGreen; "B" -> TealAccent; "C" -> InfoBlue; "D" -> WarningAmber; else -> ErrorRed
+                                    "A" -> SuccessGreen; "B" -> TealAccent; "C" -> InfoBlue
+                                    "D" -> WarningAmber; else -> ErrorRed
+                                }
+                                // Check if this student has been marked present today
+                                val markedToday = classAttendance.any { att ->
+                                    att.studentId == result.studentId &&
+                                    System.currentTimeMillis() - att.date < 86400000L
                                 }
                                 Card(
                                     shape = RoundedCornerShape(10.dp),
@@ -260,6 +311,19 @@ fun LecturerScheduleScreen(
                                             Text(result.studentId, fontWeight = FontWeight.Medium, color = TextPrimary, fontSize = 13.sp)
                                             Text("Total: ${result.totalScore.toInt()}/100", fontSize = 11.sp, color = TextSecondary)
                                         }
+                                        if (markedToday) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = "Present", tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                                        } else {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.markStudentAttendance(result.studentId, entry.courseId, lecturerId)
+                                                },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(Icons.Default.AddCircleOutline, contentDescription = "Mark", tint = NavyPrimary, modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+                                        Spacer(Modifier.width(6.dp))
                                         Box(
                                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(gradeColor.copy(0.12f)).padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
@@ -274,14 +338,16 @@ fun LecturerScheduleScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = { selectedEntry = null; classStudents = emptyList() },
+                    onClick = { selectedEntry = null },
                     colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary)
                 ) { Text("Close") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { navController.navigate("lecturer_attendance") }) {
-                    Text("Take Attendance")
-                }
+                OutlinedButton(onClick = {
+                    markForCourse  = entry.courseId
+                    showMarkDialog = true
+                    selectedEntry  = null
+                }) { Text("Mark Attendance") }
             }
         )
     }

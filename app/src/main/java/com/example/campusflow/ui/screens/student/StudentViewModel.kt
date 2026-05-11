@@ -39,20 +39,31 @@ class StudentViewModel @Inject constructor(
 
     private var currentStudentId: String = ""
 
-    fun initialize(studentId: String, department: String) {
-        if (currentStudentId == studentId) return // Already loaded
+    /**
+     * @param studentId     Firebase UID (used for attendance lookup)
+     * @param department    Used for timetable lookup
+     * @param generatedId   The STU-YYYY-XXXXX id stored in results by lecturers (optional)
+     */
+    fun initialize(studentId: String, department: String, generatedId: String = "") {
+        if (currentStudentId == studentId) return
         currentStudentId = studentId
         viewModelScope.launch {
             _isLoading.value = true
             val t = async { repository.getTimetableForStudent(department) }
             val a = async { repository.getStudentAttendance(studentId) }
-            val r = async { repository.getResultsForStudent(studentId) }
+            // Fetch results by generatedId first; fall back to uid if empty
+            val r = async {
+                val byGenId = if (generatedId.isNotBlank())
+                    repository.getResultsForStudent(generatedId) else emptyList()
+                if (byGenId.isNotEmpty()) byGenId
+                else repository.getResultsForStudent(studentId)
+            }
             val n = async { repository.getAnnouncements() }
-            _timetable.value = t.await()
-            _attendance.value = a.await()
-            _results.value = r.await()
-            _announcements.value = n.await()
-            _isLoading.value = false
+            _timetable.value      = t.await()
+            _attendance.value     = a.await()
+            _results.value        = r.await()
+            _announcements.value  = n.await()
+            _isLoading.value      = false
         }
     }
 
@@ -62,23 +73,19 @@ class StudentViewModel @Inject constructor(
             val result = repository.verifyAndMarkAttendance(currentStudentId, courseId, lat, lon)
             _attendanceMessage.value = result.fold(
                 onSuccess = {
-                    repository.getStudentAttendance(currentStudentId).also {
-                        _attendance.value = it
-                    }
-                    "Attendance marked successfully!"
+                    _attendance.value = repository.getStudentAttendance(currentStudentId)
+                    "✓ Attendance marked successfully!"
                 },
                 onFailure = { it.message ?: "Failed to mark attendance" }
             )
         }
     }
 
-    fun clearAttendanceMessage() {
-        _attendanceMessage.value = null
-    }
+    fun clearAttendanceMessage() { _attendanceMessage.value = null }
 
     fun loadAnnouncements() {
-        viewModelScope.launch {
-            _announcements.value = repository.getAnnouncements()
-        }
+        viewModelScope.launch { _announcements.value = repository.getAnnouncements() }
     }
 }
+
+

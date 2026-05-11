@@ -217,7 +217,7 @@ fun RegisterScreen(
                         }
                     } else {
                         Button(
-                            onClick = { viewModel.register(name.trim(), email.trim(), password, selectedRole) },
+                            onClick = { viewModel.register(name.trim(), email.trim(), password, selectedRole, department.trim()) },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape = RoundedCornerShape(26.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary),

@@ -26,11 +26,36 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun register(name: String, email: String, pass: String, role: UserRole): Result<User> {
+    suspend fun register(
+        name: String,
+        email: String,
+        pass: String,
+        role: UserRole,
+        department: String = ""
+    ): Result<User> {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, pass).await()
             val uid = result.user?.uid ?: throw Exception("Registration failed")
-            val user = User(uid = uid, name = name, email = email, role = role)
+
+            // Auto-generate a unique student/staff ID
+            val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            val prefix = when (role) {
+                UserRole.STUDENT  -> "STU"
+                UserRole.LECTURER -> "LEC"
+                UserRole.ADMIN    -> "ADM"
+            }
+            // Use last 5 digits of uid hash for uniqueness
+            val suffix = uid.hashCode().let { Math.abs(it) % 100000 }.toString().padStart(5, '0')
+            val generatedId = "$prefix-$year-$suffix"
+
+            val user = User(
+                uid        = uid,
+                name       = name,
+                email      = email,
+                role       = role,
+                department = department,
+                studentId  = generatedId
+            )
             database.getReference("users").child(uid).setValue(user).await()
             Result.success(user)
         } catch (e: Exception) {
@@ -47,12 +72,8 @@ class AuthRepository @Inject constructor(
         val uid = auth.currentUser?.uid ?: return
         try {
             database.getReference("users").child(uid).child("fcmToken").setValue(token).await()
-        } catch (e: Exception) {
-            // Non-critical — ignore failure
-        }
+        } catch (e: Exception) { /* Non-critical */ }
     }
 
-    fun logout() {
-        auth.signOut()
-    }
+    fun logout() { auth.signOut() }
 }

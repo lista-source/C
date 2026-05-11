@@ -46,7 +46,7 @@ fun StudentDashboard(
             try {
                 val fetchedUser = authRepository.getUserData(uid)
                 user = fetchedUser
-                viewModel.initialize(uid, fetchedUser.department)
+                viewModel.initialize(uid, fetchedUser.department, fetchedUser.studentId)
             } catch (e: Exception) { /* ignore */ }
         }
     }

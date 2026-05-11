@@ -183,7 +183,10 @@ fun ProfileScreen(
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(user?.name ?: "Loading...", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary)
-                    Text("ID: 2024001", fontSize = 13.sp, color = TextSecondary)
+                    Text(
+                        user?.studentId?.ifBlank { "ID: 2024001" } ?: "ID: —",
+                        fontSize = 13.sp, color = TextSecondary
+                    )
                     Spacer(Modifier.height(8.dp))
                     Box(
                         modifier = Modifier

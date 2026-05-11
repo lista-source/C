@@ -25,6 +25,7 @@ import com.example.campusflow.ui.auth.LoginScreen
 import com.example.campusflow.ui.auth.RegisterScreen
 import com.example.campusflow.ui.navigation.Screen
 import com.example.campusflow.ui.screens.ChatScreen
+import com.example.campusflow.ui.screens.OnboardingScreen
 import com.example.campusflow.ui.screens.ProfileScreen
 import com.example.campusflow.ui.screens.SplashScreen
 import com.example.campusflow.ui.screens.admin.AdminAnnouncementsScreen
@@ -79,11 +80,24 @@ fun AppNavigation(repository: FirebaseRepository, authRepository: AuthRepository
         composable(Screen.Splash.route) {
             SplashScreen(
                 onNavigate = { route ->
-                    navController.navigate(route) {
+                    // Not logged in → show onboarding first; already logged in → go to dashboard
+                    val destination = if (route == Screen.Login.route) Screen.Onboarding.route else route
+                    navController.navigate(destination) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 },
                 authRepository = authRepository
+            )
+        }
+
+        // ── Onboarding ────────────────────────────────────────────────────
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onFinish = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -190,13 +204,14 @@ fun AppNavigation(repository: FirebaseRepository, authRepository: AuthRepository
                 navArgument("receiverName") { type = NavType.StringType }
             )
         ) { backStack ->
-            val receiverId = backStack.arguments?.getString("receiverId") ?: ""
+            val receiverId   = backStack.arguments?.getString("receiverId")   ?: ""
             val receiverName = backStack.arguments?.getString("receiverName") ?: ""
             ChatScreen(
-                navController = navController,
+                navController  = navController,
                 authRepository = authRepository,
-                receiverId = receiverId,
-                receiverName = receiverName
+                repository     = repository,
+                receiverId     = receiverId,
+                receiverName   = receiverName
             )
         }
 
@@ -211,8 +226,9 @@ fun AppNavigation(repository: FirebaseRepository, authRepository: AuthRepository
 
         composable(Screen.LecturerSchedule.route) {
             LecturerScheduleScreen(
-                navController = navController,
-                authRepository = authRepository
+                navController  = navController,
+                authRepository = authRepository,
+                repository     = repository
             )
         }
 
@@ -237,13 +253,14 @@ fun AppNavigation(repository: FirebaseRepository, authRepository: AuthRepository
                 navArgument("receiverName") { type = NavType.StringType }
             )
         ) { backStack ->
-            val receiverId = backStack.arguments?.getString("receiverId") ?: ""
+            val receiverId   = backStack.arguments?.getString("receiverId")   ?: ""
             val receiverName = backStack.arguments?.getString("receiverName") ?: ""
             ChatScreen(
-                navController = navController,
+                navController  = navController,
                 authRepository = authRepository,
-                receiverId = receiverId,
-                receiverName = receiverName
+                repository     = repository,
+                receiverId     = receiverId,
+                receiverName   = receiverName
             )
         }
 

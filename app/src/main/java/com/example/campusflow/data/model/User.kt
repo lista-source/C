@@ -6,5 +6,7 @@ data class User(
     val email: String = "",
     val role: UserRole = UserRole.STUDENT,
     val profileImageUrl: String = "",
-    val department: String = ""
+    val department: String = "",
+    val studentId: String = "",   // Auto-generated on registration e.g. STU-2025-00123
+    val fcmToken: String = ""
 )

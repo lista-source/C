@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.campusflow.data.model.ChatMessage
 import com.example.campusflow.data.repository.AuthRepository
+import com.example.campusflow.data.repository.FirebaseRepository
 import com.example.campusflow.ui.theme.*
 import com.google.firebase.database.*
 import java.text.SimpleDateFormat
@@ -34,25 +35,29 @@ fun ChatScreen(
     navController: NavController,
     authRepository: AuthRepository,
     receiverId: String,
-    receiverName: String
+    receiverName: String,
+    repository: FirebaseRepository? = null   // optional — used for conversation path
 ) {
-    var messageText by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf(emptyList<ChatMessage>()) }
-    val currentUserId = authRepository.currentUser?.uid ?: ""
-    val database = FirebaseDatabase.getInstance()
-    val listState = rememberLazyListState()
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    var messageText    by remember { mutableStateOf("") }
+    var messages       by remember { mutableStateOf(emptyList<ChatMessage>()) }
+    var receiverOnline by remember { mutableStateOf(false) }
 
-    DisposableEffect(receiverId) {
-        val ref = database.getReference("chats")
+    val currentUserId = authRepository.currentUser?.uid ?: ""
+    val database      = FirebaseDatabase.getInstance()
+    val listState     = rememberLazyListState()
+    val timeFormat    = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    // ── Private conversation path: sorted UIDs joined by "_" ─────────────
+    // Only the two participants can read this node — nobody else sees their chat
+    val convId   = listOf(currentUserId, receiverId).sorted().joinToString("_")
+    val chatPath = "chats/$convId"
+
+    DisposableEffect(convId) {
+        val ref      = database.getReference(chatPath)
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 messages = snapshot.children
                     .mapNotNull { it.getValue(ChatMessage::class.java) }
-                    .filter {
-                        (it.senderId == currentUserId && it.receiverId == receiverId) ||
-                        (it.senderId == receiverId && it.receiverId == currentUserId)
-                    }
                     .sortedBy { it.timestamp }
             }
             override fun onCancelled(error: DatabaseError) {}
@@ -71,10 +76,7 @@ fun ChatScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(TealAccent),
+                            modifier = Modifier.size(38.dp).clip(CircleShape).background(TealAccent),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(receiverName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
@@ -83,14 +85,15 @@ fun ChatScreen(
                         Column {
                             Text(receiverName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(SuccessGreen)
-                                )
+                                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(
+                                    if (messages.isNotEmpty()) SuccessGreen else TextHint
+                                ))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Online", fontSize = 11.sp, color = SuccessGreen)
+                                Text(
+                                    if (messages.isNotEmpty()) "Active" else "Tap to start chat",
+                                    fontSize = 11.sp,
+                                    color = if (messages.isNotEmpty()) SuccessGreen else TextHint
+                                )
                             }
                         }
                     }
@@ -109,10 +112,7 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            Surface(
-                shadowElevation = 8.dp,
-                color = Color.White
-            ) {
+            Surface(shadowElevation = 8.dp, color = Color.White) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -146,12 +146,13 @@ fun ChatScreen(
                             onClick = {
                                 if (messageText.isNotBlank()) {
                                     val msg = ChatMessage(
-                                        senderId = currentUserId,
+                                        senderId   = currentUserId,
                                         receiverId = receiverId,
-                                        message = messageText.trim(),
-                                        timestamp = System.currentTimeMillis()
+                                        message    = messageText.trim(),
+                                        timestamp  = System.currentTimeMillis()
                                     )
-                                    database.getReference("chats").push().setValue(msg)
+                                    // Write to private conversation path
+                                    database.getReference(chatPath).push().setValue(msg)
                                     messageText = ""
                                 }
                             },
@@ -173,17 +174,14 @@ fun ChatScreen(
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(NavyPrimary.copy(alpha = 0.1f)),
+                        modifier = Modifier.size(80.dp).clip(CircleShape).background(NavyPrimary.copy(0.1f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Forum, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(36.dp))
                     }
                     Spacer(Modifier.height(16.dp))
                     Text("Start a conversation", fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 16.sp)
-                    Text("Send a message to $receiverName", fontSize = 13.sp, color = TextSecondary)
+                    Text("Messages are private between you and $receiverName", fontSize = 12.sp, color = TextSecondary)
                 }
             }
         } else {
@@ -214,27 +212,20 @@ fun ChatBubble(message: ChatMessage, isCurrentUser: Boolean, timeFormat: SimpleD
                     RoundedCornerShape(
                         topStart = 18.dp, topEnd = 18.dp,
                         bottomStart = if (isCurrentUser) 18.dp else 4.dp,
-                        bottomEnd = if (isCurrentUser) 4.dp else 18.dp
+                        bottomEnd   = if (isCurrentUser) 4.dp else 18.dp
                     )
                 )
                 .background(if (isCurrentUser) NavyPrimary else Color.White)
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Text(
-                text = message.message,
-                color = if (isCurrentUser) Color.White else TextPrimary,
-                fontSize = 14.sp
-            )
+            Text(message.message, color = if (isCurrentUser) Color.White else TextPrimary, fontSize = 14.sp)
         }
         Spacer(Modifier.height(2.dp))
         Text(
             timeFormat.format(Date(message.timestamp)),
-            fontSize = 10.sp,
-            color = TextHint,
+            fontSize = 10.sp, color = TextHint,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
     }
 }
-
-
 

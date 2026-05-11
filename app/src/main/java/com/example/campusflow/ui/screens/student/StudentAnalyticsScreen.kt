@@ -291,6 +291,43 @@ fun RiskAlertCard() {
     }
 }
 
+@Composable
+fun AnalyticsSummaryCard(title: String, primaryValue: String, secondaryValue: String, color: Color) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(text = primaryValue, style = MaterialTheme.typography.headlineLarge, color = color)
+                Spacer(Modifier.width(8.dp))
+                Text(text = secondaryValue, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 4.dp))
+            }
+        }
+    }
+}
+
+
+
+
+@Composable
+fun RiskAlertCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text("Academic Risk Alert", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                Text("Low GPA or attendance detected.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
 
 @Composable
 fun AnalyticsSummaryCard(title: String, primaryValue: String, secondaryValue: String, color: Color) {

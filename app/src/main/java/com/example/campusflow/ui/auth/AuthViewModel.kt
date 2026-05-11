@@ -31,10 +31,10 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun register(name: String, email: String, pass: String, role: UserRole) {
+    fun register(name: String, email: String, pass: String, role: UserRole, department: String = "") {
         viewModelScope.launch {
             _userState.value = AuthState.Loading
-            val result = repository.register(name, email, pass, role)
+            val result = repository.register(name, email, pass, role, department)
             result.onSuccess {
                 _userState.value = AuthState.Success(it)
             }.onFailure {
