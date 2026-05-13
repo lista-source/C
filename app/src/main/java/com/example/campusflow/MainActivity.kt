@@ -18,6 +18,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.campusflow.data.model.User
+import com.example.campusflow.ui.screens.admin.AdminCoursesScreen
+import com.example.campusflow.ui.screens.lecturer.LecturerAddCourseScreen
+import com.example.campusflow.ui.screens.lecturer.LecturerAddTimetableScreen
+import com.example.campusflow.ui.screens.student.StudentPersonalScheduleScreen
 import com.example.campusflow.data.repository.AuthRepository
 import com.example.campusflow.data.repository.FirebaseRepository
 import com.example.campusflow.ui.auth.AuthState
@@ -337,6 +341,69 @@ fun AppNavigation(repository: FirebaseRepository, authRepository: AuthRepository
             LecturerAppealScreen(
                 navController = navController,
                 schedule = schedule
+            )
+        }
+
+        // ── Lecturer: Add timetable slot ──────────────────────────────────
+        composable(Screen.LecturerAddTimetable.route) {
+            var lecturerId   by remember { mutableStateOf("") }
+            var department   by remember { mutableStateOf("") }
+            LaunchedEffect(Unit) {
+                authRepository.currentUser?.uid?.let { uid ->
+                    runCatching {
+                        val u = authRepository.getUserData(uid)
+                        lecturerId = uid
+                        department = u.department
+                    }
+                }
+            }
+            LecturerAddTimetableScreen(
+                navController = navController,
+                lecturerId    = lecturerId,
+                department    = department,
+                repository    = repository
+            )
+        }
+
+        // ── Lecturer: Add / manage courses ────────────────────────────────
+        composable(Screen.LecturerAddCourse.route) {
+            var lecturerId   by remember { mutableStateOf("") }
+            var department   by remember { mutableStateOf("") }
+            LaunchedEffect(Unit) {
+                authRepository.currentUser?.uid?.let { uid ->
+                    runCatching {
+                        val u = authRepository.getUserData(uid)
+                        lecturerId = uid
+                        department = u.department
+                    }
+                }
+            }
+            LecturerAddCourseScreen(
+                navController = navController,
+                lecturerId    = lecturerId,
+                department    = department,
+                repository    = repository
+            )
+        }
+
+        // ── Student: Personal study schedule ─────────────────────────────
+        composable(Screen.StudentPersonalSchedule.route) {
+            var studentId by remember { mutableStateOf("") }
+            LaunchedEffect(Unit) {
+                authRepository.currentUser?.uid?.let { uid -> studentId = uid }
+            }
+            StudentPersonalScheduleScreen(
+                navController = navController,
+                studentId     = studentId,
+                repository    = repository
+            )
+        }
+
+        // ── Admin: Manage courses ─────────────────────────────────────────
+        composable(Screen.AdminCourses.route) {
+            AdminCoursesScreen(
+                navController = navController,
+                repository    = repository
             )
         }
     }

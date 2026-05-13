@@ -206,6 +206,9 @@ fun StudentDashboard(
                     ActionItem(icon = Icons.Default.CalendarMonth, label = "My Timetable", subtitle = "View class schedule") {
                         navController.navigate(Screen.StudentTimetable.route)
                     }
+                    ActionItem(icon = Icons.Default.EditCalendar, label = "My Study Schedule", subtitle = "Add personal study & revision slots") {
+                        navController.navigate(Screen.StudentPersonalSchedule.route)
+                    }
                     ActionItem(icon = Icons.Default.QrCodeScanner, label = "Mark Attendance", subtitle = "Scan QR or use GPS") {
                         navController.navigate(Screen.StudentAttendance.route)
                     }

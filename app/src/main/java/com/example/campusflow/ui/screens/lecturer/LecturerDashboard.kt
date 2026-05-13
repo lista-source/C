@@ -207,6 +207,12 @@ fun LecturerDashboard(
                     ActionItem(icon = Icons.Default.CalendarMonth, label = "Teaching Schedule", subtitle = "View weekly timetable") {
                         navController.navigate(Screen.LecturerSchedule.route)
                     }
+                    ActionItem(icon = Icons.Default.AddCircle, label = "Add Class Slot", subtitle = "Schedule a new class to timetable") {
+                        navController.navigate(Screen.LecturerAddTimetable.route)
+                    }
+                    ActionItem(icon = Icons.Default.LibraryAdd, label = "Add Course", subtitle = "Register a course to the system") {
+                        navController.navigate(Screen.LecturerAddCourse.route)
+                    }
                     ActionItem(icon = Icons.Default.QrCodeScanner, label = "Mark Attendance (QR)", subtitle = "Generate QR or search student") {
                         navController.navigate(Screen.LecturerAttendance.route)
                     }

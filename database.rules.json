@@ -1,0 +1,62 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth.uid == $uid"
+      }
+    },
+
+    "timetable": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "personalSchedule": {
+      "$studentId": {
+        ".read": "auth.uid == $studentId",
+        ".write": "auth.uid == $studentId"
+      }
+    },
+
+    "results": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "attendance": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "announcements": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "appeals": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "courses": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "materialLinks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "chats": {
+      "$conversationId": {
+        ".read": "auth != null && ($conversationId.contains(auth.uid))",
+        ".write": "auth != null && ($conversationId.contains(auth.uid))"
+      }
+    }
+  }
+}

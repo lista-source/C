@@ -180,6 +180,9 @@ fun AdminDashboard(
                     ActionItem(icon = Icons.Default.ManageAccounts, label = "Manage Users", subtitle = "$totalUsers total users across all roles") {
                         navController.navigate(Screen.AdminManagement.route)
                     }
+                    ActionItem(icon = Icons.Default.MenuBook, label = "Course Management", subtitle = "Add, view & remove courses") {
+                        navController.navigate(Screen.AdminCourses.route)
+                    }
                     ActionItem(icon = Icons.Default.Campaign, label = "Broadcast Announcement", subtitle = "Send to all students & lecturers") {
                         navController.navigate(Screen.AdminAnnouncements.route)
                     }
